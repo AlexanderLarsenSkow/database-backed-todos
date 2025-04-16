@@ -59,27 +59,35 @@ class DatabasePersistance
   end
 
   def create_new_todo(list_id, todo_name)
-    # list = find_list(list_id)
-    # id = next_element_id(list[:todos])
-    # list[:todos] << { id: id, name: todo_name, completed: false }
+		sql = <<~SQL
+			INSERT INTO todos (name, list_id)
+			VALUES ($2, $1)
+		SQL
+
+		query(sql, list_id, todo_name)
   end
 
   def delete_todo(list_id, todo_id)
-    # list = find_list(list_id)
-    # list[:todos].reject! { |todo| todo[:id] == todo_id }
+		sql = <<~SQL
+			DELETE FROM todos
+			WHERE list_id = $1 AND id = $2
+		SQL
+
+		query(sql, list_id, todo_id)
   end
 
   def update_todo_status(list_id, todo_id, new_status)
-    # list = find_list(list_id)
-    # todo = list[:todos].find { |t| t[:id] == todo_id }
-    # todo[:completed] = new_status
+		sql = <<~SQL
+			UPDATE todos SET completed = $1
+			WHERE list_id = $2 AND id = $3
+		SQL
+
+		query(sql, new_status, list_id, todo_id)
   end
 
   def update_all_todos(list_id)
-    # list = find_list(list_id)
-    # list[:todos].each do |todo|
-    #   todo[:completed] = true
-    # end
+		sql = 'UPDATE todos SET completed = true WHERE list_id = $1'
+		query(sql, list_id)
   end
 
 	private
