@@ -25,7 +25,7 @@ helpers do
   end
 
   def todos_remaining_count(list)
-    list[:todos].count { |todo| !todo[:completed] }
+    list[:todos].count { |todo| todo[:completed] }
   end
 
   def sort_lists(lists, &block)
@@ -70,7 +70,7 @@ def error_for_todo(name)
 end
 
 before do
-  @storage = DatabasePersistance.new
+  @storage = DatabasePersistance.new(logger)
 end
 
 get "/" do

@@ -1,20 +1,37 @@
 require 'pg'
 
 class DatabasePersistance
-  attr_reader :db
+  attr_reader :db, :logger
 
-  def initialize
+  def initialize(logger)
     @db = PG.connect(dbname: 'todos')
+    @logger = logger
+  end
+
+  def query(statement, *params)
+    logger.info "#{statement}: #{params}"
+    db.exec_params(statement, params)
   end
 
   def find_list(id)
-    # session[:lists].find{ |list| list[:id] == id }
+    sql = "SELECT * FROM lists WHERE id = $1"
+    result = query(sql, id)
+
+    tuple = result.first
+		id = tuple['id'].to_i
+		todos = load_todo_records(id)
+    
+		{id: id, name: tuple['name'], todos: todos}
   end
 
   def all_lists
-    result = db.exec("SELECT * FROM lists;")
+    sql = "SELECT * FROM lists;"
+    result = query(sql)
+
     result.map do |tuple|
-      {id: tuple["id"], name: tuple["name"], todos: []}
+			id = tuple['id'].to_i
+			todos = load_todo_records(id)
+      {id: id, name: tuple["name"], todos: todos }
     end
   end
 
@@ -55,5 +72,20 @@ class DatabasePersistance
     #   todo[:completed] = true
     # end
   end
+
+	private
+
+	def load_todo_records(list_id)
+		sql = <<~SQL
+		SELECT id, name, completed FROM todos
+			WHERE list_id = $1
+		SQL
+
+		result = query(sql, list_id)
+		result.map do |tuple|
+			{ id: tuple['id'].to_i,
+				name: tuple['name'], 
+				completed: tuple['completed'] == 't' }
+		end
+	end
 end
-p DatabasePersistance.new.all_lists
