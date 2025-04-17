@@ -14,24 +14,34 @@ class DatabasePersistance
   end
 
   def find_list(id)
-    sql = "SELECT * FROM lists WHERE id = $1"
-    result = query(sql, id)
-
-    tuple = result.first
-		id = tuple['id'].to_i
-		todos = load_todo_records(id)
-    
-		{id: id, name: tuple['name'], todos: todos}
+    sql = <<~SQL
+      SELECT l.*, 
+      count(t.list_id) AS todos_count, 
+      count(nullif(t.completed, false)) AS todos_finished
+      FROM lists l JOIN todos t ON t.list_id = l.id
+      WHERE l.id = $1
+      GROUP BY l.id
+      ORDER BY todos_finished;
+    SQL
+  
+    result = query(sql, id)    
+    tuple_to_list_hash(result.first)
   end
 
   def all_lists
-    sql = "SELECT * FROM lists;"
+    sql = <<~SQL
+      SELECT l.*, 
+      count(t.list_id) AS todos_count, 
+      count(nullif(t.completed, false)) AS todos_finished
+      FROM lists l JOIN todos t ON t.list_id = l.id
+      GROUP BY l.id
+      ORDER BY todos_finished;
+    SQL
+    
     result = query(sql)
 
     result.map do |tuple|
-			id = tuple['id'].to_i
-			todos = load_todo_records(id)
-      {id: id, name: tuple["name"], todos: todos }
+      tuple_to_list_hash(tuple)
     end
   end
 
@@ -90,8 +100,6 @@ class DatabasePersistance
 		query(sql, list_id)
   end
 
-	private
-
 	def load_todo_records(list_id)
 		sql = <<~SQL
 		SELECT id, name, completed FROM todos
@@ -105,4 +113,13 @@ class DatabasePersistance
 				completed: tuple['completed'] == 't' }
 		end
 	end
+
+  private
+
+  def tuple_to_list_hash(tuple)
+    { id: tuple['id'].to_i,
+    name: tuple["name"],
+    todos_count: tuple['todos_count'].to_i,
+    todos_finished: tuple['todos_finished'].to_i }
+  end
 end
